@@ -37,7 +37,39 @@ def get_stocks_in_database(cursor):
 
     return current_stocks
 
+def get_stock_data(cursor):
+    search_query = '''
+        SELECT *
+        FROM financial_data WHERE (stock_name, stock_date) IN (
+            SELECT stock_name, MAX(stock_date) AS stock_date
+            FROM financial_data
+            GROUP BY stock_name
+        )
+        ORDER BY stock_name
+    '''
+    cursor.execute(search_query)
+    database_stocks = cursor.fetchall()
+    
+    return database_stocks
+
 #LAMBDA FUNCTIONS
+def get_all_data(event, context):
+    """
+    Lambda Function get-all-data
+    Returns all tickers with corresponding data
+    """
+    postgres_connection, cursor = connect_postgres()
+
+    data = get_stock_data(cursor)
+
+    postgres_connection.close()
+
+    return {
+        'statusCode': 200,
+        'headers': { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': '*' },
+        'body': json.dumps(data, default=lambda x: x.__str__())
+    }
+
 def get_all_tickers(event, context):
     """
     Lambda Function get-all-tickers
@@ -51,7 +83,7 @@ def get_all_tickers(event, context):
 
     return {
         'statusCode': 200,
-        'headers': { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+        'headers': { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': '*' },
         'body': json.dumps(current_stocks)
     }
 
@@ -210,6 +242,6 @@ def lambda_handler(event, context):
 
     return {
         'statusCode': 200,
-        'headers': { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+        'headers': { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': '*' },
         'body': json.dumps('The following stocks have been updated: ' + STOCK_STRING)
     }
